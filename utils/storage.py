@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-def save_expense(date, store, amount, category, csv_path="data/expenses.csv"):
+def save_expense(date, store, amount, category, csv_path="data/receipts.csv"):
     entry = {
         "Date": date,
         "Store": store,

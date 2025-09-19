@@ -25,7 +25,6 @@ if uploaded_file:
     text = extract_text(file_path)
     st.text_area("Extracted Text", text, height=200)
 
-    # Regex for amount and date
     amount_match = re.search(r'(\d+[.,]?\d+)', text)
     date_match = re.search(r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})', text)
 
@@ -46,11 +45,49 @@ if uploaded_file:
         save_expense(date, store, amount, category)
         st.success("Receipt saved to tracker!")
 
-    if st.button("📊 Show Expense Summary"):
-        import pandas as pd
-        if os.path.exists("data/expenses.csv"):
-            df = pd.read_csv("data/expenses.csv")
-            st.dataframe(df)
-            st.bar_chart(df.groupby("Category")["Amount"].sum())
-        else:
-            st.warning("No expense data found.")
+# New batch processing section with uploads/images path
+st.markdown("---")
+st.header("📂 Batch Process Receipts from Uploads Folder")
+
+if st.button("⚡ Process All Receipts in Uploads Folder"):
+    upload_images_dir = os.path.join("uploads", "images")
+    if not os.path.exists(upload_images_dir) or len(os.listdir(upload_images_dir)) == 0:
+        st.warning(f"No files found in {upload_images_dir}.")
+    else:
+        files = [f for f in os.listdir(upload_images_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        progress_bar = st.progress(0)
+        results = []
+
+        for idx, filename in enumerate(files):
+            file_path = os.path.join(upload_images_dir, filename)
+            text = extract_text(file_path)
+
+            amount_match = re.search(r'(\d+[.,]?\d+)', text)
+            date_match = re.search(r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})', text)
+
+            amount = amount_match.group(1) if amount_match else "Not Found"
+            date = date_match.group(1) if date_match else "Not Found"
+            store = text.strip().split("\n")[0]
+
+            category = categorize(text)
+
+            save_expense(date, store, amount, category)
+
+            results.append({"Filename": filename, "Store": store, "Date": date, "Amount": amount, "Category": category})
+
+            progress_bar.progress((idx + 1) / len(files))
+
+        st.success(f"Processed and saved {len(files)} receipts.")
+        st.dataframe(results)
+
+# Show expense summary as before
+st.markdown("---")
+if st.button("📊 Show Expense Summary"):
+    import pandas as pd
+    csv_path = "data/expenses.csv"
+    if os.path.exists(csv_path) and os.path.getsize(csv_path) > 0:
+        df = pd.read_csv(csv_path)
+        st.dataframe(df)
+        st.bar_chart(df.groupby("Category")["Amount"].sum())
+    else:
+        st.warning("No expense data found or file is empty.")
